@@ -39,7 +39,7 @@ const (
 // Must be called only once after proccess start
 // should not be called with
 func SetCurrentEnv(e Environment) error {
-	if e != undefined {
+	if currentEnv != undefined {
 		return fmt.Errorf("env already set to:%s. resetting env to:%s not allowed", currentEnv, e)
 	}
 
