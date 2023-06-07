@@ -1,7 +1,15 @@
+/*
+'env' is a singleton package. Set the current env once at process start and access it anywhere using env.Current().
+Current env must be set before trying to read it, else it will raise panic.
+Current env can be set only once. trying to set it again will return error and leave the previously set value as it is.
+*/
+
 package env
 
 import (
+	"errors"
 	"fmt"
+	"os"
 	"strings"
 
 	"golang.org/x/text/cases"
@@ -13,6 +21,8 @@ var (
 	localEnv map[Environment]bool = map[Environment]bool{}
 	devEnv   map[Environment]bool = map[Environment]bool{}
 	prodEnv  map[Environment]bool = map[Environment]bool{}
+
+	currentEnv Environment = undefined
 )
 
 const (
@@ -20,10 +30,56 @@ const (
 	Development Environment = "development"
 	Staging     Environment = "staging"
 	Production  Environment = "production"
+
+	undefined Environment = "_"
+	empty     Environment = ""
 )
 
-func Env(env string) Environment {
-	return Environment(env)
+// Sets current env
+// Must be called only once after proccess start
+// should not be called with
+func SetCurrentEnv(e Environment) error {
+	if e != undefined {
+		return fmt.Errorf("env already set to:%s. resetting env to:%s not allowed", currentEnv, e)
+	}
+
+	if e == empty {
+		return fmt.Errorf("env must not be empty string")
+	}
+
+	if !e.IsValid() {
+		return fmt.Errorf("env:%s is not a valid environment. to define it use one of the valid Define functions", e)
+	}
+	currentEnv = e
+	return nil
+}
+
+// Reads from the variable passed
+// Must be called only once after proccess start
+func ReadCurrentEnv(envVar string) (Environment, error) {
+	envVar = strings.TrimSpace(envVar)
+	if envVar == "" {
+		return empty, errors.New("env var to read env cannot be empty")
+	}
+
+	value, found := os.LookupEnv(envVar)
+	if !found {
+		return empty, fmt.Errorf("unable to read env. env var '%s' is not set", envVar)
+	}
+	e := toEnv(value)
+
+	if err := SetCurrentEnv(e); err != nil {
+		return empty, err
+	}
+
+	return Current(), nil
+}
+
+// returns the currently set env.
+// calling Current() without setting it first will panic
+// set Current env using ReadCurrentEnv()/SetCurrentEnv()
+func Current() Environment {
+	return currentEnv
 }
 
 func DefaultEnvironments() {
@@ -153,4 +209,9 @@ func langOrEn(langs []language.Tag) language.Tag {
 		return langs[0]
 	}
 	return language.English
+}
+
+func toEnv(e string) Environment {
+	e = strings.TrimSpace(e)
+	return Environment(e)
 }

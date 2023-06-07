@@ -41,7 +41,7 @@ func TestEnableEnvironments(t *testing.T) {
 	assert.False(Staging.IsProduction())
 
 	// Custom Env
-	production1 := Env("production1")
+	var production1 Environment = "production1"
 	assert.Nil(DefineProduction(production1))
 	assert.Nil(DefineProduction(production1), "redifinition should not error")
 	assert.NotNil(DefineLocal(production1), "redifinition in different category should error")
